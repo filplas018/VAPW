@@ -39,9 +39,10 @@ namespace plass_elektroStanice
         private Thread _thread = new Thread(ThreadProcedure);
         public StationState State { get; set; }
 
-        private LightState _lightState = LightState.Green;
 
-        private LightState _entryLightState = LightState.Red;
+        private LightState _entryLightState = LightState.Green;
+
+        public ChargingMode _chargingMode;
         public LightState EntryLightState
         {
             get
@@ -96,6 +97,8 @@ namespace plass_elektroStanice
         }
 
         private int _chargeLevel;
+        private int _maxChargeLevel;
+        private int _chargeStep;
         public int ChargeLevel
         {
             get
@@ -112,19 +115,73 @@ namespace plass_elektroStanice
                 }
             }
         }
+
+        public int MaxChargeLevel
+        {
+            get
+            {
+                return _maxChargeLevel;
+            }
+            private set
+            {
+                bool flag = value != _maxChargeLevel;
+                _maxChargeLevel = value;
+                if (flag)
+                {
+                    this.OnMaxChargeLevelChange?.Invoke(this, _chargeLevel);
+                }
+            }
+        }
+        public int ChargeStep
+        {
+            get
+            {
+                return _chargeStep;
+            }
+            private set
+            {
+                bool flag = value != _chargeStep;
+                
+                _chargeStep = value;
+                if (flag)
+                {
+                    this.OnChargeStepChange?.Invoke(this, _chargeLevel);
+                }
+            }
+        }
         public delegate void ChangedLightStateHandler(object sender, LightState LightState);
         public delegate void ChangedCarLocationStateHandler(object sender, CarLocation carLocationState);
         public delegate void ChangedChargeLevelHandler(object sender, int chargeLevel);
+        public delegate void ChangedMaxChargeLevelHandler(object sender, int maxChargeLevel);
+        public delegate void ChangedChargeStepHandler(object sender, int chargeStep);
         public event ChangedLightStateHandler OnEntryLightStateChange;
         public event ChangedLightStateHandler OnExitLightStateChange;
         public event ChangedCarLocationStateHandler OnCarLocationStateChange;
         public event ChangedChargeLevelHandler OnChargeLevelChange;
+        public event ChangedMaxChargeLevelHandler OnMaxChargeLevelChange;
+        public event ChangedChargeStepHandler OnChargeStepChange;
 
-        public ChargingStation(int initialChargeLevel)
+        public ChargingStation(int initialChargeLevel, int maxChargeLevel, ChargingMode Mode = ChargingMode.Standard)
         {
             State = StationState.Start;
             CarLocationState = CarLocation.InFront;
+            _chargingMode = Mode;
+
+            switch (_chargingMode)
+            {
+                case ChargingMode.Standard:
+                    ChargeStep = 5;
+                    break;
+                case ChargingMode.Fast:
+                    ChargeStep = 10;
+                    break;
+                case ChargingMode.SuperFast:
+                    ChargeStep = 15;
+                    break;
+
+            }
             _chargeLevel = initialChargeLevel;
+            _maxChargeLevel = maxChargeLevel;
             _thread.Start(this);
         }
         private static void ThreadProcedure(object obj)
@@ -142,8 +199,12 @@ namespace plass_elektroStanice
                         chargingStation.EntryLightState = LightState.Red;
                         break;
                     case StationState.Charging:
-                        chargingStation.ChargeLevel++;
-                        Thread.Sleep(1000); // Simulace nabíjení
+                        if(chargingStation.ChargeLevel < chargingStation.MaxChargeLevel)
+                        {
+                            chargingStation.ChargeLevel += chargingStation.ChargeStep;
+                            Thread.Sleep(1000); // Simulace nabíjení
+                        }
+                        
                         break;
                     case StationState.Finished:
                         chargingStation.ExitLightState = LightState.Green;
