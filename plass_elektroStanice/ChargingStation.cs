@@ -239,6 +239,7 @@ namespace plass_elektroStanice
             }
         }
 
+
         public void Dispose()
         {
             try
