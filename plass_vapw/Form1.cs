@@ -30,6 +30,7 @@ namespace plass_vapw
                 station.OnExitLightStateChange += Station_OnExitLightStateChange;
                 station.OnCarLocationStateChange += Station_OnCarLocationStateChange;
                 station.OnChargeLevelChange += Station_OnChargeLevelChange;
+                station.OnChargingModeChange += Station_OnChargingModeChange;
             }
 
 
@@ -60,6 +61,11 @@ namespace plass_vapw
         {
             VykreslitStav();
         }
+        private void Station_OnChargingModeChange(object sende, ChargingStation.ChargingMode e)
+        {
+            VykreslitStav();
+
+        }
 
         private void Timer_Tick(object sender, EventArgs e)
         {
@@ -84,21 +90,21 @@ namespace plass_vapw
 
             progressBar1.BackColor = Color.Yellow;
             
-            station._chargingMode = ChargingStation.ChargingMode.Standard;
+            station.ChargeMode = ChargingStation.ChargingMode.Standard;
         }
 
         private void FastButton_CheckedChanged(object sender, EventArgs e)
         {
             progressBar1.BackColor = Color.Green;
             
-            station._chargingMode = ChargingStation.ChargingMode.Fast;
+            station.ChargeMode = ChargingStation.ChargingMode.Fast;
         }
 
         private void SuperFastButton_CheckedChanged(object sender, EventArgs e)
         {
             progressBar1.BackColor = Color.Blue;
             
-            station._chargingMode = ChargingStation.ChargingMode.SuperFast;
+            station.ChargeMode = ChargingStation.ChargingMode.SuperFast;
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)
@@ -125,9 +131,20 @@ namespace plass_vapw
                     pictureBox1.Location = new Point(240, 348);
                     break;
                 case ChargingStation.StationState.Charging:
-                    progressBar1.Value = station.ChargeLevel;
+
+                    if(station.ChargeLevel <= 100)
+                    {
+                        progressBar1.Value = station.ChargeLevel;
+                        Start.Enabled = false;
+                        if (station.ChargeLevel == station.MaxChargeLevel)
+                        {
+                            Start.Enabled = true;
+                        }
+                    }
+                    
                     break;
                 case ChargingStation.StationState.Finished:
+                    progressBar1.Value = station.ChargeLevel;
                     panel1.BackColor = Color.Green;
                     pictureBox1.Location = new Point(10, 348);
                     break;

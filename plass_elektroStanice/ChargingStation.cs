@@ -43,6 +43,39 @@ namespace plass_elektroStanice
         private LightState _entryLightState = LightState.Green;
 
         public ChargingMode _chargingMode;
+        public ChargingMode ChargeMode
+        {
+            get
+            {
+                return _chargingMode;
+            }
+            set
+            {
+                bool flag = value != _chargingMode;
+                _chargingMode = value;
+
+                switch (_chargingMode)
+                {
+                    case ChargingMode.Standard:
+                        ChargeStep = 5;
+                        break;
+                    case ChargingMode.Fast:
+                        ChargeStep = 10;
+                        break;
+                    case ChargingMode.SuperFast:
+                        ChargeStep = 20;
+                        break;
+                    default:
+                        ChargeStep = 5;
+                        break;
+
+                }
+                if (flag)
+                {
+                    this.OnChargingModeChange?.Invoke(this, _chargingMode);
+                }
+            }
+        }
         public LightState EntryLightState
         {
             get
@@ -151,6 +184,7 @@ namespace plass_elektroStanice
         }
         public delegate void ChangedLightStateHandler(object sender, LightState LightState);
         public delegate void ChangedCarLocationStateHandler(object sender, CarLocation carLocationState);
+        public delegate void ChangedChargingModeHandler(object sender, ChargingMode chargingMode);
         public delegate void ChangedChargeLevelHandler(object sender, int chargeLevel);
         public delegate void ChangedMaxChargeLevelHandler(object sender, int maxChargeLevel);
         public delegate void ChangedChargeStepHandler(object sender, int chargeStep);
@@ -160,26 +194,13 @@ namespace plass_elektroStanice
         public event ChangedChargeLevelHandler OnChargeLevelChange;
         public event ChangedMaxChargeLevelHandler OnMaxChargeLevelChange;
         public event ChangedChargeStepHandler OnChargeStepChange;
+        public event ChangedChargingModeHandler OnChargingModeChange;
 
         public ChargingStation(int initialChargeLevel, int maxChargeLevel, ChargingMode Mode = ChargingMode.Standard)
         {
             State = StationState.Start;
             CarLocationState = CarLocation.InFront;
-            _chargingMode = Mode;
-
-            switch (_chargingMode)
-            {
-                case ChargingMode.Standard:
-                    ChargeStep = 5;
-                    break;
-                case ChargingMode.Fast:
-                    ChargeStep = 10;
-                    break;
-                case ChargingMode.SuperFast:
-                    ChargeStep = 15;
-                    break;
-
-            }
+            _chargingMode = Mode;        
             _chargeLevel = initialChargeLevel;
             _maxChargeLevel = maxChargeLevel;
             _thread.Start(this);
@@ -199,7 +220,7 @@ namespace plass_elektroStanice
                         chargingStation.EntryLightState = LightState.Red;
                         break;
                     case StationState.Charging:
-                        if(chargingStation.ChargeLevel < chargingStation.MaxChargeLevel)
+                        if(chargingStation.ChargeLevel <= chargingStation.MaxChargeLevel)
                         {
                             chargingStation.ChargeLevel += chargingStation.ChargeStep;
                             Thread.Sleep(1000); // Simulace nabíjení
@@ -207,6 +228,7 @@ namespace plass_elektroStanice
                         
                         break;
                     case StationState.Finished:
+                        chargingStation.ChargeLevel = 0;
                         chargingStation.ExitLightState = LightState.Green;
                         break;
                     case StationState.CarLeaving:
